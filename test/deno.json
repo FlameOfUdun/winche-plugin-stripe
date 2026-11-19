@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "@winche-technologies/winche-functions": "../node_modules/@winche-technologies/winche-functions/dist/index.js",
+    "@winche-technologies/winche-functions/testing": "../node_modules/@winche-technologies/winche-functions/dist/testing.js",
+    "@winche-technologies/winche-admin": "../node_modules/@winche-technologies/winche-admin/dist/index.js"
+  }
+}

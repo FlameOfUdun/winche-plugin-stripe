@@ -1,0 +1,28 @@
+{
+  "title": "Stripe",
+  "description": "Payments and subscriptions with Stripe: Checkout and the customer portal from callables, each user's subscription kept on them (a plan claim, a read-only record) as Stripe's webhooks say, and one-off purchases recorded.",
+  "icon": "credit-card",
+  "settings": {
+    "SUCCESS_URL": { "label": "After paying", "description": "Where Checkout sends the user once they've paid, e.g. https://app.example.com/billing/done?session={CHECKOUT_SESSION_ID}.", "type": "string", "required": true },
+    "CANCEL_URL": { "label": "After cancelling", "description": "Where Checkout sends the user when they go back without paying.", "type": "string", "required": true },
+    "PORTAL_RETURN_URL": { "label": "Back from the portal", "description": "Where the customer portal's back link goes. Empty: the cancel address.", "type": "string" },
+    "PRICES": { "label": "Prices on offer", "description": "The price IDs apps may start a checkout for (price_…), separated by commas. Empty: any active price of the account.", "type": "string" },
+    "PLANS": { "label": "Plan names", "description": "Each price's plan, as price_…=pro, separated by commas. Without one: the price's lookup key, else its product's ID.", "type": "string" },
+    "PLAN_CLAIM": { "label": "Plan claim", "description": "The claim a subscriber's plan goes in (for rules: request.auth.token.plan == \"pro\"). Empty: no claim.", "type": "string", "default": "plan" },
+    "COLLECTION": { "label": "Customers collection", "description": "One document per user ({uid}): their Stripe customer, and their subscription when the record below is on. Make it read-only to apps in your rules.", "type": "string", "default": "billing" },
+    "RECORD_SUBSCRIPTIONS": { "label": "Record subscriptions", "description": "Keep each user's subscription (status, plan, renewal) and purchases on their document, for apps to show and watch.", "type": "boolean", "default": true },
+    "TRIAL_DAYS": { "label": "Free trial days", "description": "Days of trial for new subscriptions (0: none).", "type": "integer", "default": 0 },
+    "PROMOTION_CODES": { "label": "Promotion codes", "description": "Let customers enter promotion codes in Checkout.", "type": "boolean", "default": false },
+    "AUTOMATIC_TAX": { "label": "Automatic tax", "description": "Stripe Tax works out the tax (turn it on in Stripe first).", "type": "boolean", "default": false }
+  },
+  "secrets": {
+    "SECRET_KEY": { "label": "Secret key", "description": "Your Stripe secret key (sk_live_… or sk_test_…), or a restricted key with access to customers, Checkout, the billing portal and subscriptions." },
+    "WEBHOOK_SECRET": { "label": "Webhook signing secret", "description": "The signing secret (whsec_…) of the webhook endpoint you add in Stripe for the webhook function." }
+  },
+  "access": [
+    "Creates a Stripe customer for each user who starts a checkout, with their uid and email.",
+    "Starts Checkout and customer portal sessions, and cancels subscriptions on users' request.",
+    "Writes each user's Stripe customer, subscription and purchases to their document in the customers collection.",
+    "Sets the plan claim on subscribers, and takes it off when their subscription ends."
+  ]
+}
