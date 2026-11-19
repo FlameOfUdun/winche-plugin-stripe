@@ -129,9 +129,6 @@ npm install
 npm test        # builds, then runs the tests with Deno (Stripe and the project's data stood in)
 ```
 
-Until @winche-technologies/winche-functions 3.1 is on npm, the dev dependency points at a local checkout
-(`file:../../TypeScript/winche-functions-typescript-sdk`); switch it to `^3.1.0` once it's published.
-
 Publishing: push a tag `v<version>` (the version in package.json); the workflow tests it and publishes to npm with
 trusted publishing.
 
