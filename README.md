@@ -7,7 +7,8 @@ show. Nothing to write or deploy yourself.
 
 ## Install
 
-In the console: **Functions → Plugins → Add plugin**, then this package. Or with the CLI:
+In the console: **Plugins → Browse**, then this package, and **Install**: a few steps (its settings, its secrets). Its
+page then lists what's left to do outside Winche, with this copy's own addresses. Or with the CLI:
 
 ```sh
 winche plugins:install @winche-technologies/winche-plugin-stripe --id payments \
