@@ -14,8 +14,8 @@ page then lists what's left to do outside Winche, with this copy's own addresses
 winche plugins:install @winche-technologies/winche-plugin-stripe --id payments \
   --set SUCCESS_URL=https://app.example.com/billing/done --set CANCEL_URL=https://app.example.com/billing \
   --set PLANS=price_123=pro,price_456=team
-winche functions secrets:set PAYMENTS__SECRET_KEY        # sk_live_… or sk_test_… (typed unseen, or --ref aws-sm:…)
-winche functions secrets:set PAYMENTS__WEBHOOK_SECRET    # whsec_… of the endpoint below
+winche secrets:set PAYMENTS__SECRET_KEY        # sk_live_… or sk_test_… (typed unseen, or --ref aws-sm:…)
+winche secrets:set PAYMENTS__WEBHOOK_SECRET    # whsec_… of the endpoint below
 ```
 
 Then add a webhook endpoint in Stripe (Developers → Webhooks) at
