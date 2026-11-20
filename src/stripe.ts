@@ -71,6 +71,35 @@ export class Stripe {
   cancelAtPeriodEnd(id: string) { return this.request("POST", `/v1/subscriptions/${encodeURIComponent(id)}`, { cancel_at_period_end: true }); }
   resume(id: string) { return this.request("POST", `/v1/subscriptions/${encodeURIComponent(id)}`, { cancel_at_period_end: false }); }
   cancelNow(id: string) { return this.request("DELETE", `/v1/subscriptions/${encodeURIComponent(id)}`); }
+
+  /** The account's active prices, with their products. */
+  activePrices() { return this.request("GET", "/v1/prices", { active: true, limit: 100, expand: ["data.product"] }); }
+  /** A subscription item's quantity (seats), charged or credited for the rest of the period. */
+  setQuantity(subscription: string, item: string, quantity: number) {
+    return this.request("POST", `/v1/subscriptions/${encodeURIComponent(subscription)}`, { items: [{ id: item, quantity }], proration_behavior: "create_prorations" });
+  }
+  /** Usage for a billing meter (its event name), for one customer. */
+  meterEvent(eventName: string, customer: string, value: number, identifier?: string) {
+    return this.request("POST", "/v1/billing/meter_events", { event_name: eventName, payload: { stripe_customer_id: customer, value: String(value) }, identifier });
+  }
+  /** Refunds a payment, all of it or `amount` (in the currency's smallest unit). */
+  refund(paymentIntent: string, amount: number | undefined, metadata: Record<string, string>) {
+    return this.request("POST", "/v1/refunds", { payment_intent: paymentIntent, amount, metadata }, `winche-refund-${paymentIntent}-${amount ?? "all"}-${metadata.request ?? ""}`);
+  }
+  paymentIntent(id: string) { return this.request("GET", `/v1/payment_intents/${encodeURIComponent(id)}`); }
+  /** The customer with this email (the newest), if any. */
+  customerByEmail(email: string) { return this.request("GET", "/v1/customers", { email, limit: 1 }); }
+  createCustomerByEmail(email: string, name: string | null) { return this.request("POST", "/v1/customers", { email, name: name ?? undefined }, `winche-customer-email-${email.toLowerCase()}`); }
+  /** An invoice the customer pays later from Stripe's page (sent by email): one line, any amount. */
+  async sendInvoice(i: { customer: string; amount: number; currency: string; description: string; daysUntilDue: number; metadata: Record<string, string> }) {
+    const invoice = await this.request("POST", "/v1/invoices", {
+      customer: i.customer, collection_method: "send_invoice", days_until_due: i.daysUntilDue, description: i.description, metadata: i.metadata,
+      auto_advance: true, pending_invoice_items_behavior: "exclude",
+    });
+    await this.request("POST", "/v1/invoiceitems", { customer: i.customer, invoice: invoice.id, amount: i.amount, currency: i.currency, description: i.description, metadata: i.metadata });
+    await this.request("POST", `/v1/invoices/${encodeURIComponent(invoice.id)}/finalize`, { auto_advance: true });
+    return this.request("POST", `/v1/invoices/${encodeURIComponent(invoice.id)}/send`);
+  }
 }
 
 const hex = (bytes: Uint8Array) => [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");

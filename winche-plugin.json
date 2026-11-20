@@ -1,6 +1,6 @@
 {
   "title": "Stripe",
-  "description": "Payments and subscriptions with Stripe: Checkout and the customer portal from callables, each user's subscription kept on them (a plan claim, a read-only record) as Stripe's webhooks say, and one-off purchases recorded.",
+  "description": "Payments and subscriptions with Stripe: Checkout (prices or any amount), emailed invoices, the customer portal, seats, usage and refunds from callables; each user's subscriptions kept on them (a plan claim, a read-only record) as Stripe's webhooks say, with purchases, refunds, disputes and invoices recorded.",
   "icon": "credit-card",
   "settings": {
     "SUCCESS_URL": {
@@ -25,7 +25,7 @@
     },
     "PRICES": {
       "label": "Prices on offer",
-      "description": "The price IDs apps may start a checkout for (price_\u2026), separated by commas. Empty: any active price of the account.",
+      "description": "The price IDs apps may start a checkout for (price_…), separated by commas. Empty: any active price of the account.",
       "type": "string",
       "section": "Checkout"
     },
@@ -52,7 +52,7 @@
     },
     "PLANS": {
       "label": "Plan names",
-      "description": "Each price's plan, as price_\u2026=pro, separated by commas. Without one: the price's lookup key, else its product's ID.",
+      "description": "Each price's plan, as price_…=pro, separated by commas. Without one: the price's lookup key, else its product's ID.",
       "type": "string",
       "section": "Subscribers"
     },
@@ -76,34 +76,126 @@
       "type": "boolean",
       "default": true,
       "section": "Subscribers"
+    },
+    "MULTIPLE_SUBSCRIPTIONS": {
+      "label": "Several subscriptions",
+      "description": "Let a user have more than one subscription (add-ons). The record then lists them all (subscriptions) and the plan claim holds a list of plans.",
+      "type": "boolean",
+      "default": false,
+      "section": "Subscribers"
+    },
+    "WHO_CAN_CHANGE_SEATS": {
+      "label": "Who may change seats",
+      "description": "server: only the project's own code. signed-in: subscribers change their own seats (setQuantity).",
+      "type": "select",
+      "options": [
+        "server",
+        "signed-in"
+      ],
+      "default": "signed-in",
+      "section": "Subscribers"
+    },
+    "WHO_CAN_CHARGE": {
+      "label": "Who may charge amounts",
+      "description": "Who may call pay and bill (an amount they choose). server: only the project's own code. signed-in: any signed-in user (pay only for themselves). claim: users with the claim below.",
+      "type": "select",
+      "options": [
+        "server",
+        "signed-in",
+        "claim"
+      ],
+      "default": "server",
+      "section": "Amounts and invoices"
+    },
+    "CHARGE_CLAIM": {
+      "label": "Claim that may charge",
+      "description": "e.g. admin, or role=office.",
+      "type": "string",
+      "default": "admin",
+      "section": "Amounts and invoices",
+      "showIf": {
+        "setting": "WHO_CAN_CHARGE",
+        "is": "claim"
+      }
+    },
+    "CURRENCIES": {
+      "label": "Currencies",
+      "description": "The currencies amounts may be in, separated by commas; the first is used when none is given.",
+      "type": "string",
+      "default": "gbp",
+      "section": "Amounts and invoices"
+    },
+    "MIN_AMOUNT": {
+      "label": "Smallest amount",
+      "description": "In the currency's smallest unit (50 is £0.50; Stripe's own minimum still applies).",
+      "type": "integer",
+      "default": 50,
+      "section": "Amounts and invoices"
+    },
+    "MAX_AMOUNT": {
+      "label": "Largest amount",
+      "description": "In the currency's smallest unit (100000 is £1,000).",
+      "type": "integer",
+      "default": 100000,
+      "section": "Amounts and invoices"
+    },
+    "INVOICE_DAYS": {
+      "label": "Invoice due in (days)",
+      "description": "Days to pay a bill when the call doesn't say.",
+      "type": "integer",
+      "default": 14,
+      "section": "Amounts and invoices"
+    },
+    "WHO_CAN_REFUND": {
+      "label": "Who may refund",
+      "description": "server: only the project's own code. claim: also users with the claim below.",
+      "type": "select",
+      "options": [
+        "server",
+        "claim"
+      ],
+      "default": "server",
+      "section": "Refunds"
+    },
+    "REFUND_CLAIM": {
+      "label": "Claim that may refund",
+      "description": "e.g. admin, or role=office.",
+      "type": "string",
+      "default": "admin",
+      "section": "Refunds",
+      "showIf": {
+        "setting": "WHO_CAN_REFUND",
+        "is": "claim"
+      }
     }
   },
   "secrets": {
     "SECRET_KEY": {
       "label": "Secret key",
-      "description": "Your Stripe secret key (sk_live_\u2026 or sk_test_\u2026), or a restricted key with access to customers, Checkout, the billing portal and subscriptions."
+      "description": "Your Stripe secret key (sk_live_… or sk_test_…), or a restricted key with access to customers, prices, Checkout, the billing portal, subscriptions, invoices, refunds and billing meters (for what you use)."
     },
     "WEBHOOK_SECRET": {
       "label": "Webhook signing secret",
-      "description": "The signing secret (whsec_\u2026) of the webhook endpoint you add in Stripe for the webhook function."
+      "description": "The signing secret (whsec_…) of the webhook endpoint you add in Stripe for the webhook function."
     }
   },
   "access": [
-    "Creates a Stripe customer for each user who starts a checkout, with their uid and email.",
-    "Starts Checkout and customer portal sessions, and cancels subscriptions on users' request.",
-    "Writes each user's Stripe customer, subscription and purchases to their document in the customers collection.",
+    "Creates a Stripe customer for each user who starts a checkout or is billed, with their uid and email.",
+    "Starts Checkout and customer portal sessions; changes seats and cancels subscriptions on users' request.",
+    "Charges and bills amounts, reports usage and makes refunds when the project's own code (or who you allow) asks.",
+    "Writes each user's Stripe customer, subscriptions, purchases and invoices to their document in the customers collection.",
     "Sets the plan claim on subscribers, and takes it off when their subscription ends."
   ],
   "billing": "Stripe charges its fees on each payment (and Stripe Tax, when it's on).",
   "setup": [
     {
-      "text": "In Stripe (Developers \u2192 Webhooks \u2192 Add endpoint), add `{{function:webhook}}` with the events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused`, `customer.subscription.resumed`, `invoice.paid` and `invoice.payment_failed`."
+      "text": "In Stripe (Developers → Webhooks → Add endpoint), add `{{function:webhook}}` with the events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused`, `customer.subscription.resumed`, `invoice.finalized`, `invoice.paid`, `invoice.payment_failed`, `invoice.voided`, `invoice.marked_uncollectible`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.updated` and `charge.dispute.closed`."
     },
     {
-      "text": "Copy that endpoint's signing secret (`whsec_\u2026`) into the secret **{{secret:WEBHOOK_SECRET}}** (Secrets tab)."
+      "text": "Copy that endpoint's signing secret (`whsec_…`) into the secret **{{secret:WEBHOOK_SECRET}}** (Secrets tab)."
     },
     {
-      "text": "Make **{{setting:COLLECTION}}** read-only to apps in your database rules: each user reads their own `{{setting:COLLECTION}}/{uid}` (and its `purchases`); only the plugin writes there."
+      "text": "Make **{{setting:COLLECTION}}** read-only to apps in your database rules: each user reads their own `{{setting:COLLECTION}}/{uid}` (and its `purchases` and `invoices`); only the plugin writes there."
     },
     {
       "text": "Rules can check a subscriber's plan with `request.auth.token.{{setting:PLAN_CLAIM}}`.",
@@ -111,6 +203,9 @@
         "setting": "PLAN_CLAIM",
         "set": true
       }
+    },
+    {
+      "text": "For usage-based prices, make a billing meter in Stripe (Billing → Meters) and report usage from your own functions with `{{id}}.reportUsage` and the meter's event name."
     }
   ]
 }

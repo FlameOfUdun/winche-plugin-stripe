@@ -1,6 +1,6 @@
 {
   "name": "@winche-technologies/winche-plugin-stripe",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A Winche plugin: payments and subscriptions with Stripe. Checkout and the customer portal as callables, subscriptions kept on users (claims, a read-only record) from Stripe's webhooks.",
   "type": "module",
   "main": "./dist/index.js",
