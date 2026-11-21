@@ -315,7 +315,9 @@ Deno.test("prices, seats, usage and refunds", async () => {
 Deno.test("webhook: invoices, refunds and disputes recorded; several subscriptions in a list claim", async () => {
   let subs: any[] = [sub("active"), { ...sub("active", "price_add"), id: "sub_add" }];
   fakeStripe((_m, path) => path === "/v1/subscriptions" ? [200, { data: subs }] : path === "/v1/customers/cus_1" ? [200, { id: "cus_1", metadata: { winche_uid: "ann" } }]
-    : path === "/v1/payment_intents/pi_5" ? [200, { id: "pi_5", customer: "cus_1", metadata: {} }] : [404, {}]);
+    : path === "/v1/payment_intents/pi_5" ? [200, { id: "pi_5", customer: "cus_1", metadata: {} }]
+    : path === "/v1/payment_intents/pi_6" ? [200, { id: "pi_6", customer: "cus_1", metadata: { winche_uid: "ann" } }]
+    : path === "/v1/checkout/sessions" ? [200, { data: [{ id: "cs_6", client_reference_id: "ann", metadata: { winche_uid: "ann" } }] }] : [404, {}]);
   const db = fakeServer();
   const { webhook } = copy({ MULTIPLE_SUBSCRIPTIONS: true, PLANS: "price_pro=pro, price_add=storage" });
   const post = (event: unknown) => {
@@ -347,5 +349,12 @@ Deno.test("webhook: invoices, refunds and disputes recorded; several subscriptio
     eq([v(db.docs["billing/ann/purchases/cs_5"].status), v(db.docs["billing/ann/purchases/cs_5"].refunded)], ["partly refunded", "1000"]);
     await post({ type: "charge.dispute.created", data: { object: { payment_intent: "pi_5", status: "needs_response", reason: "fraudulent", amount: 2500, metadata: {} } } });
     eq(v((db.docs["billing/ann/purchases/cs_5"].dispute as any).mapValue.fields.reason), "fraudulent");
+
+    // Stripe sent the dispute before the checkout's own event: it lands on the purchase-to-be, which then fills in.
+    await post({ type: "charge.dispute.created", data: { object: { payment_intent: "pi_6", status: "needs_response", reason: "fraudulent", amount: 7000, metadata: {} } } });
+    await post({ type: "checkout.session.completed", data: { object: { id: "cs_6", mode: "payment", payment_status: "paid", customer: "cus_1", client_reference_id: "ann",
+      amount_total: 7000, currency: "gbp", payment_intent: "pi_6", metadata: { winche_uid: "ann", price: "price_a,price_b" } } } });
+    const six = db.docs["billing/ann/purchases/cs_6"];
+    eq([v(six.amount), v((six.dispute as any).mapValue.fields.status), v(six.paymentIntent)], ["7000", "needs_response", "pi_6"]);
   }));
 });

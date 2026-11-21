@@ -208,10 +208,18 @@ export default plugin((p) => {
     return live[0] ?? null;
   };
 
-  /** The purchase a payment (its payment intent) was recorded as, under its user. */
+  /**
+   * The purchase a payment (its payment intent) is recorded as, under its user. Stripe may send a refund or dispute
+   * before the checkout's own event: then the purchase it will be (its Checkout session's), written to first.
+   */
   const purchaseOf = async (uid: string, paymentIntent: string) => {
     const found = await userDoc(uid).collection("purchases").where("paymentIntent", "==", paymentIntent).limit(1).get();
-    return found.empty ? null : found.docs[0].reference;
+    if (!found.empty) return found.docs[0].reference;
+    const session = (await stripe().checkoutOf(paymentIntent)).data?.[0];
+    if (!session?.id || (session.client_reference_id ?? session.metadata?.winche_uid) !== uid) return null;
+    const ref = userDoc(uid).collection("purchases").doc(session.id);
+    await ref.set({ paymentIntent }, { merge: true });
+    return ref;
   };
 
   const signedIn = { secrets: [secretKey] };

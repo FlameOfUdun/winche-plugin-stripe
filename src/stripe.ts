@@ -86,6 +86,8 @@ export class Stripe {
   refund(paymentIntent: string, amount: number | undefined, metadata: Record<string, string>) {
     return this.request("POST", "/v1/refunds", { payment_intent: paymentIntent, amount, metadata }, `winche-refund-${paymentIntent}-${amount ?? "all"}-${metadata.request ?? ""}`);
   }
+  /** The Checkout session that made a payment, if one did. */
+  checkoutOf(paymentIntent: string) { return this.request("GET", "/v1/checkout/sessions", { payment_intent: paymentIntent, limit: 1 }); }
   paymentIntent(id: string) { return this.request("GET", `/v1/payment_intents/${encodeURIComponent(id)}`); }
   /** The customer with this email (the newest), if any. */
   customerByEmail(email: string) { return this.request("GET", "/v1/customers", { email, limit: 1 }); }
